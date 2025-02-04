@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="google-adsense-account" content="ca-pub-7567388531442485">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7567388531442485"
+     crossorigin="anonymous"></script>
+  <title>Image Catalogue Resizer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: #f8fafc;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #3b82f6;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .upload-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 6px;
+      padding: 1rem;
+      text-align: center;
+      color: #475569;
+      cursor: pointer;
+      margin-bottom: 1rem;
+    }
+
+    .upload-area.dragover {
+      background: #e2e8f0;
+    }
+
+    .preview {
+      max-height: 300px;
+      object-fit: contain;
+      display: block;
+      margin: 0.5rem auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    .inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+
+    .inputs label {
+      font-size: 0.9rem;
+    }
+
+    .inputs input {
+      width: 70px;
+      padding: 0.3rem;
+    }
+
+    select {
+      padding: 0.3rem;
+    }
+
+    .url-input {
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+
+    .result {
+      text-align: center;
+    }
+
+    #result-img {
+      max-width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      background: #fff;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .download-link {
+      display: inline-block;
+      margin-top: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: #3b82f6;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.8rem;
+      color: #475569;
+    }
+  </style>
+</head>
+<body>
+  <header>Image Catalogue Resizer</header>
+
+  <div class="container">
+    <!-- Left Panel: Input -->
+    <div class="panel" id="input-panel">
+      <h2>Raw Image</h2>
+
+      <!-- Drag & Drop area -->
+      <div class="upload-area" id="drop-area">
+        <p>Drag & Drop Image Here or Click to Select</p>
+        <input type="file" accept="image/*" id="file-input" style="display:none" />
+      </div>
+
+      <!-- or URL input -->
+      <label for="url-input">Or Enter Image URL:</label>
+      <input type="text" id="url-input" class="url-input" placeholder="https://example.com/image.jpg" />
+
+      <h3>Preview (Original):</h3>
+      <img id="original-preview" class="preview" alt="Original Preview" />
+
+      <div class="inputs">
+        <label>Trim Resize (W x H):</label>
+        <input type="number" id="trim-width" value="800" min="1" />
+        <input type="number" id="trim-height" value="800" min="1" />
+      </div>
+      <div class="inputs">
+        <label>Trim Ratio:</label>
+        <select id="trim-ratio">
+          <option value="none">None</option>
+          <option value="1:1">1:1</option>
+          <option value="1:2">1:2</option>
+          <option value="2:1">2:1</option>
+          <option value="3:2">3:2</option>
+          <option value="4:3">4:3</option>
+        </select>
+      </div>
+      <div class="inputs">
+        <label>Final Canvas (W x H):</label>
+        <input type="number" id="final-width" value="1000" min="1" />
+        <input type="number" id="final-height" value="1000" min="1" />
+      </div>
+      <div class="inputs">
+        <label>Canvas Ratio:</label>
+        <select id="canvas-ratio">
+          <option value="none">None</option>
+          <option value="1:1">1:1</option>
+          <option value="1:2">1:2</option>
+          <option value="2:1">2:1</option>
+          <option value="3:2">3:2</option>
+          <option value="4:3">4:3</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Right Panel: Output -->
+    <div class="panel" id="output-panel">
+      <h2>Processed Image</h2>
+      <div class="result">
+        <!-- We'll hide the canvas and create a draggable <img> -->
+        <canvas id="result-canvas" style="display:none;"></canvas>
+        <img id="result-img" draggable="true" alt="Processed Result" />
+        <br />
+        <a id="download-link" class="download-link" href="#" download>Download Processed Image</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2025 Image Catalogue Resizer
+  </footer>
+
+  <script>
+    // Utility: format timestamp-based filename
+    function generateTimestampFilename() {
+      const now = new Date();
+      // Format YYYYMMDD_HHMMSS
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+    }
+
+    // Convert base64 to blob
+    function dataURLToBlob(dataURL) {
+      const [meta, base64] = dataURL.split(',');
+      const mime = meta.match(/:(.*?);/)[1];
+      const binStr = atob(base64);
+      const len = binStr.length;
+      const u8arr = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        u8arr[i] = binStr.charCodeAt(i);
+      }
+      return new Blob([u8arr], { type: mime });
+    }
+
+    // Find bounding box of non-white pixels in a Canvas
+    // We'll treat near-white as white with a threshold
+    function findTrimBoundingBox(ctx, width, height, threshold = 250) {
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const data = imageData.data;
+      let minX = width;
+      let minY = height;
+      let maxX = 0;
+      let maxY = 0;
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const i = (y * width + x) * 4;
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          // Simple check if pixel is not nearly white
+          if ((r < threshold) || (g < threshold) || (b < threshold)) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      if (maxX < minX || maxY < minY) {
+        // No non-white pixels found, just return the whole image
+        return { x: 0, y: 0, w: width, h: height };
+      }
+
+      return {
+        x: minX,
+        y: minY,
+        w: maxX - minX + 1,
+        h: maxY - minY + 1,
+      };
+    }
+
+    // Draw the processed image
+    async function processImage(img) {
+      // Get user inputs
+      const trimWidthInput = document.getElementById('trim-width');
+      const trimHeightInput = document.getElementById('trim-height');
+      const finalWidthInput = document.getElementById('final-width');
+      const finalHeightInput = document.getElementById('final-height');
+
+      const trimW = parseInt(trimWidthInput.value) || 800;
+      const trimH = parseInt(trimHeightInput.value) || 800;
+      const finalW = parseInt(finalWidthInput.value) || 1000;
+      const finalH = parseInt(finalHeightInput.value) || 1000;
+
+      // Step 1: Draw the image in a temporary canvas
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+
+      tempCanvas.width = img.naturalWidth;
+      tempCanvas.height = img.naturalHeight;
+      tempCtx.drawImage(img, 0, 0);
+
+      // Step 2: Find bounding box of non-white area ("trim")
+      const box = findTrimBoundingBox(tempCtx, tempCanvas.width, tempCanvas.height);
+
+      // Step 3: Crop that bounding box into a new canvas
+      const cropCanvas = document.createElement('canvas');
+      const cropCtx = cropCanvas.getContext('2d');
+      cropCanvas.width = box.w;
+      cropCanvas.height = box.h;
+      cropCtx.drawImage(
+        tempCanvas,
+        box.x, box.y, box.w, box.h,
+        0, 0, box.w, box.h
+      );
+
+      // Step 4: Resize the cropped image to fit inside trimW x trimH (maintaining aspect ratio)
+      const cropAspect = cropCanvas.width / cropCanvas.height;
+      let targetW = trimW;
+      let targetH = trimH;
+      if (cropAspect > (trimW / trimH)) {
+        // width-limited
+        targetW = trimW;
+        targetH = Math.round(trimW / cropAspect);
+      } else {
+        // height-limited
+        targetH = trimH;
+        targetW = Math.round(trimH * cropAspect);
+      }
+
+      const resizedCanvas = document.createElement('canvas');
+      const resizedCtx = resizedCanvas.getContext('2d');
+      resizedCanvas.width = targetW;
+      resizedCanvas.height = targetH;
+      resizedCtx.drawImage(cropCanvas, 0, 0, targetW, targetH);
+
+      // Step 5: Place the resized image onto a final canvas of size finalW x finalH with white background
+      const resultCanvas = document.getElementById('result-canvas');
+      const rCtx = resultCanvas.getContext('2d');
+      resultCanvas.width = finalW;
+      resultCanvas.height = finalH;
+
+      // Fill with white
+      rCtx.fillStyle = '#ffffff';
+      rCtx.fillRect(0, 0, finalW, finalH);
+
+      // Center the resized image
+      const offsetX = Math.round((finalW - targetW) / 2);
+      const offsetY = Math.round((finalH - targetH) / 2);
+
+      rCtx.drawImage(resizedCanvas, offsetX, offsetY);
+
+      // Step 6: Convert canvas to dataURL in JPG format and show in <img>
+      const dataURL = resultCanvas.toDataURL('image/jpeg', 0.9);
+      const resultImg = document.getElementById('result-img');
+      resultImg.src = dataURL;
+
+      // Step 7: Provide a download link with unique timestamp name
+      const timestampName = generateTimestampFilename();
+      const downloadLink = document.getElementById('download-link');
+      downloadLink.download = `image_${timestampName}.jpg`;
+      downloadLink.href = dataURL;
+    }
+
+    // Implement custom dragstart on #result-img to simulate file drag
+    document.addEventListener('DOMContentLoaded', () => {
+      const resultImg = document.getElementById('result-img');
+      resultImg.addEventListener('dragstart', (e) => {
+        // Convert the dataURL to a Blob, then add it as a file to dataTransfer
+        const dataURL = resultImg.src;
+        if (!dataURL) return;
+
+        e.dataTransfer.setData('text/uri-list', dataURL); // Fallback: some apps can parse the link
+
+        const blob = dataURLToBlob(dataURL);
+        const file = new File([blob], 'dragged-image.jpg', { type: 'image/jpeg' });
+        if (e.dataTransfer.items) {
+          e.dataTransfer.items.add(file);
+        }
+      });
+    });
+
+    // Handle ratio changes
+    function handleRatioChange(ratioSelectId, widthInputId, heightInputId) {
+      const ratioSelect = document.getElementById(ratioSelectId);
+      const widthInput = document.getElementById(widthInputId);
+      const heightInput = document.getElementById(heightInputId);
+
+      ratioSelect.addEventListener('change', () => {
+        if (ratioSelect.value === 'none') return;
+        adjustByRatio(ratioSelect, widthInput, heightInput);
+      });
+
+      widthInput.addEventListener('input', () => {
+        if (ratioSelect.value === 'none') return;
+        adjustByRatio(ratioSelect, widthInput, heightInput, 'width');
+      });
+
+      heightInput.addEventListener('input', () => {
+        if (ratioSelect.value === 'none') return;
+        adjustByRatio(ratioSelect, widthInput, heightInput, 'height');
+      });
+    }
+
+    function adjustByRatio(ratioSelect, widthInput, heightInput, changed = 'width') {
+      const val = ratioSelect.value;
+      if (val === 'none') return;
+      const [rW, rH] = val.split(':').map(Number);
+      const w = parseInt(widthInput.value) || 1;
+      const h = parseInt(heightInput.value) || 1;
+      if (changed === 'width') {
+        // Recalculate height based on ratio
+        const newH = Math.round((w * rH) / rW);
+        heightInput.value = newH;
+      } else {
+        // Recalculate width
+        const newW = Math.round((h * rW) / rH);
+        widthInput.value = newW;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const fileInput = document.getElementById('file-input');
+      const dropArea = document.getElementById('drop-area');
+      const urlInput = document.getElementById('url-input');
+      const originalPreview = document.getElementById('original-preview');
+
+      // Apply ratio logic
+      handleRatioChange('trim-ratio', 'trim-width', 'trim-height');
+      handleRatioChange('canvas-ratio', 'final-width', 'final-height');
+
+      // Load from file input
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files[0]) {
+          const file = fileInput.files[0];
+          loadImageFromFile(file);
+        }
+      });
+
+      // Drag & drop events
+      dropArea.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.classList.add('dragover');
+      });
+
+      dropArea.addEventListener('dragleave', () => {
+        dropArea.classList.remove('dragover');
+      });
+
+      dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          const file = e.dataTransfer.files[0];
+          loadImageFromFile(file);
+        }
+      });
+
+      // URL input
+      urlInput.addEventListener('change', () => {
+        const url = urlInput.value.trim();
+        if (url) {
+          loadImageFromURL(url);
+        }
+      });
+
+      function loadImageFromFile(file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            originalPreview.src = ev.target.result;
+            processImage(img);
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function loadImageFromURL(url) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          originalPreview.src = url;
+          processImage(img);
+        };
+        img.onerror = () => {
+          alert('Failed to load image from URL');
+        };
+        img.src = url;
+      }
+
+      // If user changes the dimension inputs, reprocess the last loaded image
+      [
+        'trim-width',
+        'trim-height',
+        'final-width',
+        'final-height',
+        'trim-ratio',
+        'canvas-ratio',
+      ].forEach(id => {
+        document.getElementById(id).addEventListener('change', reprocess);
+        document.getElementById(id).addEventListener('input', reprocess);
+      });
+
+      function reprocess() {
+        const src = originalPreview.src;
+        if (!src) return;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          processImage(img);
+        };
+        img.src = src;
+      }
+    });
+  </script>
+</body>
+</html>
