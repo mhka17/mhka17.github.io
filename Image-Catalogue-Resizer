@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>Image Catalogue Resizer</title>
+  <!-- Google AdSense script (requires valid data-ad-client) -->
   <meta name="google-adsense-account" content="ca-pub-7567388531442485">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7567388531442485"
      crossorigin="anonymous"></script>
-  <title>Image Catalogue Resizer</title>
   <style>
     body {
       margin: 0;
@@ -129,6 +130,10 @@
       font-size: 0.8rem;
       color: #475569;
     }
+
+    .ads-container {
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -149,7 +154,7 @@
       <label for="url-input">Or Enter Image URL:</label>
       <input type="text" id="url-input" class="url-input" placeholder="https://example.com/image.jpg" />
 
-      <h3>Preview (Original):</h3>
+      <h3>Preview (Original as JPG):</h3>
       <img id="original-preview" class="preview" alt="Original Preview" />
 
       <div class="inputs">
@@ -201,6 +206,19 @@
 
   <footer>
     &copy; 2025 Image Catalogue Resizer
+    <!-- Google AdSense ad container -->
+    <div class="ads-container">
+      <!-- Replace data-ad-client and data-ad-slot with your own values -->
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-7567388531442485"
+           data-ad-slot="1234567890"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
   </footer>
 
   <script>
@@ -228,6 +246,19 @@
         u8arr[i] = binStr.charCodeAt(i);
       }
       return new Blob([u8arr], { type: mime });
+    }
+
+    // Load the image but convert it to JPG for the left-side preview
+    function convertToJpgDataURL(img) {
+      const tmpCanvas = document.createElement('canvas');
+      const tmpCtx = tmpCanvas.getContext('2d');
+
+      tmpCanvas.width = img.naturalWidth;
+      tmpCanvas.height = img.naturalHeight;
+      tmpCtx.drawImage(img, 0, 0);
+
+      // Return a JPG data URL
+      return tmpCanvas.toDataURL('image/jpeg', 0.9);
     }
 
     // Find bounding box of non-white pixels in a Canvas
@@ -463,7 +494,10 @@
         reader.onload = (ev) => {
           const img = new Image();
           img.onload = () => {
-            originalPreview.src = ev.target.result;
+            // Convert to JPG for the left-side preview
+            const jpgDataUrl = convertToJpgDataURL(img);
+            originalPreview.src = jpgDataUrl;
+            // Also process the original for the final output
             processImage(img);
           };
           img.src = ev.target.result;
@@ -475,7 +509,10 @@
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
-          originalPreview.src = url;
+          // Convert to JPG for left preview
+          const jpgDataUrl = convertToJpgDataURL(img);
+          originalPreview.src = jpgDataUrl;
+          // Also process for final
           processImage(img);
         };
         img.onerror = () => {
@@ -498,6 +535,8 @@
       });
 
       function reprocess() {
+        // Reuse the content of the left preview (which is now JPG) as the "source".
+        // We'll create an Image from that data.
         const src = originalPreview.src;
         if (!src) return;
         const img = new Image();
