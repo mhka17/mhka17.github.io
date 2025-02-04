@@ -104,6 +104,15 @@
       text-align: center;
     }
 
+    #result-img {
+      max-width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      background: #fff;
+      display: block;
+      margin: 0 auto;
+    }
+
     .download-link {
       display: inline-block;
       margin-top: 0.5rem;
@@ -181,7 +190,9 @@
     <div class="panel" id="output-panel">
       <h2>Processed Image</h2>
       <div class="result">
-        <canvas id="result-canvas" style="max-width: 100%; border: 1px solid #e2e8f0;"></canvas>
+        <!-- We'll hide the canvas and create a draggable <img> -->
+        <canvas id="result-canvas" style="display:none;"></canvas>
+        <img id="result-img" draggable="true" alt="Processed Result" />
         <br />
         <a id="download-link" class="download-link" href="#" download>Download Processed Image</a>
       </div>
@@ -204,6 +215,19 @@
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const seconds = String(now.getSeconds()).padStart(2, '0');
       return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+    }
+
+    // Convert base64 to blob
+    function dataURLToBlob(dataURL) {
+      const [meta, base64] = dataURL.split(',');
+      const mime = meta.match(/:(.*?);/)[1];
+      const binStr = atob(base64);
+      const len = binStr.length;
+      const u8arr = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        u8arr[i] = binStr.charCodeAt(i);
+      }
+      return new Blob([u8arr], { type: mime });
     }
 
     // Find bounding box of non-white pixels in a Canvas
@@ -281,11 +305,9 @@
       );
 
       // Step 4: Resize the cropped image to fit inside trimW x trimH (maintaining aspect ratio)
-      const aspect = box.w / box.h;
+      const cropAspect = cropCanvas.width / cropCanvas.height;
       let targetW = trimW;
       let targetH = trimH;
-      // We'll make sure we keep aspect ratio by fitting the longer side
-      const cropAspect = cropCanvas.width / cropCanvas.height;
       if (cropAspect > (trimW / trimH)) {
         // width-limited
         targetW = trimW;
@@ -318,12 +340,35 @@
 
       rCtx.drawImage(resizedCanvas, offsetX, offsetY);
 
-      // Step 6: Provide a download link with unique timestamp name
+      // Step 6: Convert canvas to dataURL in JPG format and show in <img>
+      const dataURL = resultCanvas.toDataURL('image/jpeg', 0.9);
+      const resultImg = document.getElementById('result-img');
+      resultImg.src = dataURL;
+
+      // Step 7: Provide a download link with unique timestamp name
       const timestampName = generateTimestampFilename();
       const downloadLink = document.getElementById('download-link');
       downloadLink.download = `image_${timestampName}.jpg`;
-      downloadLink.href = resultCanvas.toDataURL('image/jpeg');
+      downloadLink.href = dataURL;
     }
+
+    // Implement custom dragstart on #result-img to simulate file drag
+    document.addEventListener('DOMContentLoaded', () => {
+      const resultImg = document.getElementById('result-img');
+      resultImg.addEventListener('dragstart', (e) => {
+        // Convert the dataURL to a Blob, then add it as a file to dataTransfer
+        const dataURL = resultImg.src;
+        if (!dataURL) return;
+
+        e.dataTransfer.setData('text/uri-list', dataURL); // Fallback: some apps can parse the link
+
+        const blob = dataURLToBlob(dataURL);
+        const file = new File([blob], 'dragged-image.jpg', { type: 'image/jpeg' });
+        if (e.dataTransfer.items) {
+          e.dataTransfer.items.add(file);
+        }
+      });
+    });
 
     // Handle ratio changes
     function handleRatioChange(ratioSelectId, widthInputId, heightInputId) {
@@ -332,7 +377,6 @@
       const heightInput = document.getElementById(heightInputId);
 
       ratioSelect.addEventListener('change', () => {
-        // If ratio != none, enforce ratio on user changes
         if (ratioSelect.value === 'none') return;
         adjustByRatio(ratioSelect, widthInput, heightInput);
       });
@@ -376,7 +420,7 @@
       handleRatioChange('canvas-ratio', 'final-width', 'final-height');
 
       // Load from file input
-      fileInput.addEventListener('change', (e) => {
+      fileInput.addEventListener('change', () => {
         if (fileInput.files && fileInput.files[0]) {
           const file = fileInput.files[0];
           loadImageFromFile(file);
@@ -420,7 +464,6 @@
           const img = new Image();
           img.onload = () => {
             originalPreview.src = ev.target.result;
-            // Process immediately
             processImage(img);
           };
           img.src = ev.target.result;
@@ -433,7 +476,6 @@
         img.crossOrigin = 'anonymous';
         img.onload = () => {
           originalPreview.src = url;
-          // Process immediately
           processImage(img);
         };
         img.onerror = () => {
