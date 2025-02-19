@@ -555,7 +555,6 @@ function generateUUID() {
     return v.toString(16);
   });
 }
-
 function getLogId() {
   const name = "logId=";
   const ca = decodeURIComponent(document.cookie).split(';');
@@ -569,20 +568,16 @@ function getLogId() {
 }
 
 function logUsage(functionName) {
-  getLogId((logId) => {
-    const payload = {
-      function_name: functionName,
-      user_id: logId
-    };
-    fetch('https://rmbhn.org/wp-json/myapi/v1/log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    .then(response => response.json())
-    .then(data => console.log('Log sent:', data))
-    .catch(error => console.error('Log error:', error));
-  });
+  const logId = getLogId();
+  const payload = { function_name: functionName, user_id: logId };
+  fetch('https://rmbhn.org/wp-json/myapi/v1/log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(response => response.json())
+  .then(data => console.log('Log sent:', data))
+  .catch(error => console.error('Log error:', error));
 }
   </script>
 </body>
