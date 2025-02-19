@@ -373,6 +373,7 @@
 
     // Main pipeline according to the steps
     function processImageSteps(img) {
+      logUsage('duplicatinImage');
       // Get user inputs
       const borderThreshold = parseInt(document.getElementById('border-threshold').value) || 250;
       const afterTrimPadding = parseInt(document.getElementById('after-trim-padding').value) || 0;
@@ -536,6 +537,42 @@
         img.src = urlVal;
       }
     });
+    function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : ((r & 0x3) | 0x8);
+    return v.toString(16);
+  });
+}
+
+function getLogId(callback) {
+  chrome.storage.sync.get('logId', (result) => {
+    let logId = result.logId;
+    if (!logId) {
+      logId = generateUUID();
+      chrome.storage.sync.set({ logId }, () => callback(logId));
+    } else {
+      callback(logId);
+    }
+  });
+}
+
+function logUsage(functionName) {
+  getLogId((logId) => {
+    const payload = {
+      function_name: functionName,
+      user_id: logId
+    };
+    fetch('https://rmbhn.org/wp-json/myapi/v1/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => console.log('Log sent:', data))
+    .catch(error => console.error('Log error:', error));
+  });
+}
   </script>
 </body>
 </html>
