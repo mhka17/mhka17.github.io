@@ -546,11 +546,11 @@
 }
 
 function getLogId(callback) {
-  chrome.storage.sync.get('logId', (result) => {
+  chrome.storage.local.get('logId', (result) => {
     let logId = result.logId;
     if (!logId) {
       logId = generateUUID();
-      chrome.storage.sync.set({ logId }, () => callback(logId));
+      chrome.storage.local.set({ logId }, () => callback(logId));
     } else {
       callback(logId);
     }
