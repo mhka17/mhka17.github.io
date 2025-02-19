@@ -556,16 +556,16 @@ function generateUUID() {
   });
 }
 
-function getLogId(callback) {
-  chrome.storage.sync.get('logId', (result) => {
-    let logId = result.logId;
-    if (!logId) {
-      logId = generateUUID();
-      chrome.storage.sync.set({ logId }, () => callback(logId));
-    } else {
-      callback(logId);
-    }
-  });
+function getLogId() {
+  const name = "logId=";
+  const ca = decodeURIComponent(document.cookie).split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i].trim();
+    if (c.indexOf(name) === 0) return c.substring(name.length);
+  }
+  const id = generateUUID();
+  document.cookie = "logId=" + id + "; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/";
+  return id;
 }
 
 function logUsage(functionName) {
